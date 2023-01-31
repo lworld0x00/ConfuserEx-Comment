@@ -55,18 +55,27 @@ namespace Confuser.Protections {
 			}
 
 			protected override void Execute(ConfuserContext context, ProtectionParameters parameters) {
+
+				//获取Confuser.Runtime中的AntiDump类
 				TypeDef rtType = context.Registry.GetService<IRuntimeService>().GetRuntimeType("Confuser.Runtime.AntiDump");
 
 				var marker = context.Registry.GetService<IMarkerService>();
 				var name = context.Registry.GetService<INameService>();
 
 				foreach (ModuleDef module in parameters.Targets.OfType<ModuleDef>()) {
+
+					//将Confuser.Runtime.AntiDump类注入到目标程序集，返回目标程序集中的所有IDnlibDef
+					//什么是IDnlibDef?
 					IEnumerable<IDnlibDef> members = InjectHelper.Inject(rtType, module.GlobalType, module);
 
+					//寻找<Module>::.cctor
 					MethodDef cctor = module.GlobalType.FindStaticConstructor();
 					var init = (MethodDef)members.Single(method => method.Name == "Initialize");
+
+					//插入call void Confuser.Runtime.AntiDump::Initialize()这条IL指令
 					cctor.Body.Instructions.Insert(0, Instruction.Create(OpCodes.Call, init));
 
+					//标记IDnlibDef为需要重命名的
 					foreach (IDnlibDef member in members)
 						name.MarkHelper(member, marker, (Protection)Parent);
 				}

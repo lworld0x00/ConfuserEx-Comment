@@ -11,13 +11,18 @@ namespace Confuser.Runtime {
 			uint old;
 			Module module = typeof(AntiDump).Module;
 			var bas = (byte*)Marshal.GetHINSTANCE(module);
+			//获取NT头偏移的地址
 			byte* ptr = bas + 0x3c;
 			byte* ptr2;
+			//ptr指向NT头
 			ptr = ptr2 = bas + *(uint*)ptr;
+			//ptr指向文件头的NumberOfSections
 			ptr += 0x6;
 			ushort sectNum = *(ushort*)ptr;
+			//获取节的数量
 			ptr += 14;
 			ushort optSize = *(ushort*)ptr;
+			//ptr指向第一个节头
 			ptr = ptr2 = ptr + 0x4 + optSize;
 
 			byte* @new = stackalloc byte[11];
