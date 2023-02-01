@@ -75,7 +75,7 @@ namespace Confuser.Protections {
 					//插入call void Confuser.Runtime.AntiDump::Initialize()这条IL指令
 					cctor.Body.Instructions.Insert(0, Instruction.Create(OpCodes.Call, init));
 
-					//标记IDnlibDef为需要重命名的
+					//注入的方法标记为需要重命名的
 					foreach (IDnlibDef member in members)
 						name.MarkHelper(member, marker, (Protection)Parent);
 				}

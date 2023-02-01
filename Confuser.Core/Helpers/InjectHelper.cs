@@ -242,7 +242,7 @@ namespace Confuser.Core.Helpers {
 		/// <returns>Injected members.</returns>
 		public static IEnumerable<IDnlibDef> Inject(TypeDef typeDef, TypeDef newType, ModuleDef target) {
 			var ctx = new InjectContext(typeDef.Module, target);
-			ctx.DefMap[typeDef] = newType;
+			ctx.DefMap[typeDef] = newType;	
 			PopulateContext(typeDef, ctx);
 			Copy(typeDef, ctx, false);
 			return ctx.DefMap.Values.Except(new[] { newType }).OfType<IDnlibDef>();
