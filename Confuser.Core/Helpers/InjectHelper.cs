@@ -58,12 +58,15 @@ namespace Confuser.Core.Helpers {
 		/// <param name="ctx">The injection context.</param>
 		/// <returns>The new TypeDef.</returns>
 		static TypeDef PopulateContext(TypeDef typeDef, InjectContext ctx) {
+
+			//在ctx的信息中查找TypeDef，如果不存在则进行复制
 			var ret = ctx.Map(typeDef)?.ResolveTypeDef();
 			if (ret is null) {
 				ret = Clone(typeDef);
 				ctx.DefMap[typeDef] = ret;
 			}
 
+			//处理NestedTypes/methods/fields，处理的是Metadata
 			foreach (TypeDef nestedType in typeDef.NestedTypes)
 				ret.NestedTypes.Add(PopulateContext(nestedType, ctx));
 
@@ -214,6 +217,8 @@ namespace Confuser.Core.Helpers {
 		/// <returns>The injected TypeDef.</returns>
 		public static TypeDef Inject(TypeDef typeDef, ModuleDef target) {
 			var ctx = new InjectContext(typeDef.Module, target);
+
+			//处理Context，复制typeDef到ctx中，这里的复制是处理信息？
 			var result = PopulateContext(typeDef, ctx);
 			Copy(typeDef, ctx, true);
 			return result;
@@ -273,8 +278,10 @@ namespace Confuser.Core.Helpers {
 			/// <param name="module">The origin module.</param>
 			/// <param name="target">The target module.</param>
 			public InjectContext(ModuleDef module, ModuleDef target) {
+				//设置源Module和目标Module
 				OriginModule = module;
 				TargetModule = target;
+				//新建Importer
 				Importer = new Importer(target, ImporterOptions.TryToUseTypeDefs, new GenericParamContext(), this);
 			}
 
