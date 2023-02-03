@@ -112,7 +112,7 @@ namespace Confuser.Core.Helpers {
 			foreach (var paramDef in methodDef.ParamDefs)
 				newMethodDef.ParamDefs.Add(new ParamDefUser(paramDef.Name, paramDef.Sequence, paramDef.Attributes));
 
-			//获取实现信息，并加入到ImplMap中，不清楚这个ImplMap是干嘛的？
+			//获取实现信息，并加入到ImplMap中，不清楚这个ImplMap是干嘛的
 			if (methodDef.ImplMap != null)
 				newMethodDef.ImplMap = new ImplMapUser(new ModuleRefUser(ctx.TargetModule, methodDef.ImplMap.Module.Name), methodDef.ImplMap.Name, methodDef.ImplMap.Attributes);
 			
@@ -233,7 +233,6 @@ namespace Confuser.Core.Helpers {
 		/// <returns>The injected TypeDef.</returns>
 		public static TypeDef Inject(TypeDef typeDef, ModuleDef target) {
 			var ctx = new InjectContext(typeDef.Module, target);
-
 			//处理Context，复制typeDef到ctx中，这里的复制是处理信息？
 			var result = PopulateContext(typeDef, ctx);
 			Copy(typeDef, ctx, true);
