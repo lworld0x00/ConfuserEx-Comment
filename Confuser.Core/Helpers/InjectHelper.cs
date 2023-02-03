@@ -14,6 +14,9 @@ namespace Confuser.Core.Helpers {
 		/// </summary>
 		/// <param name="origin">The origin TypeDef.</param>
 		/// <returns>The cloned TypeDef.</returns>
+		/// 
+
+		//Clone的作用是进行初始化，TypeDef/MethodDefUser/FieldDefUser
 		static TypeDefUser Clone(TypeDef origin) {
 			var ret = new TypeDefUser(origin.Namespace, origin.Name);
 			ret.Attributes = origin.Attributes;
@@ -47,6 +50,7 @@ namespace Confuser.Core.Helpers {
 		/// <param name="origin">The origin FieldDef.</param>
 		/// <returns>The cloned FieldDef.</returns>
 		static FieldDefUser Clone(FieldDef origin) {
+			//FieldDefUser是变量
 			var ret = new FieldDefUser(origin.Name, null, origin.Attributes);
 			return ret;
 		}
@@ -59,7 +63,7 @@ namespace Confuser.Core.Helpers {
 		/// <returns>The new TypeDef.</returns>
 		static TypeDef PopulateContext(TypeDef typeDef, InjectContext ctx) {
 
-			//在ctx的信息中查找TypeDef，如果不存在则进行复制
+			//在ctx的信息中查找TypeDef，如果存在则不处理，否则进行复制
 			var ret = ctx.Map(typeDef)?.ResolveTypeDef();
 			if (ret is null) {
 				ret = Clone(typeDef);
@@ -88,6 +92,7 @@ namespace Confuser.Core.Helpers {
 			var newTypeDef = ctx.Map(typeDef)?.ResolveTypeDefThrow();
 			newTypeDef.BaseType = ctx.Importer.Import(typeDef.BaseType);
 
+			//处理接口类
 			foreach (InterfaceImpl iface in typeDef.Interfaces)
 				newTypeDef.Interfaces.Add(new InterfaceImplUser(ctx.Importer.Import(iface.Interface)));
 		}
@@ -103,15 +108,19 @@ namespace Confuser.Core.Helpers {
 			newMethodDef.Signature = ctx.Importer.Import(methodDef.Signature);
 			newMethodDef.Parameters.UpdateParameterTypes();
 			
+			//获取参数信息，并加入到ParamDefs中
 			foreach (var paramDef in methodDef.ParamDefs)
 				newMethodDef.ParamDefs.Add(new ParamDefUser(paramDef.Name, paramDef.Sequence, paramDef.Attributes));
 
+			//获取实现信息，并加入到ImplMap中，不清楚这个ImplMap是干嘛的？
 			if (methodDef.ImplMap != null)
 				newMethodDef.ImplMap = new ImplMapUser(new ModuleRefUser(ctx.TargetModule, methodDef.ImplMap.Module.Name), methodDef.ImplMap.Name, methodDef.ImplMap.Attributes);
-
+			
+			//获取CustomAttribute，并加入到newMethodDef的CustomAttributes中
 			foreach (CustomAttribute ca in methodDef.CustomAttributes)
 				newMethodDef.CustomAttributes.Add(new CustomAttribute((ICustomAttributeType)ctx.Importer.Import(ca.Constructor)));
 
+			//如果Method有函数体，则需要复制其中的字节码
 			if (methodDef.HasBody)
 				CopyMethodBody(methodDef, ctx, newMethodDef);
 		}
@@ -121,8 +130,10 @@ namespace Confuser.Core.Helpers {
 			newMethodDef.Body = new CilBody(methodDef.Body.InitLocals, new List<Instruction>(),
 				new List<ExceptionHandler>(), new List<Local>()) {MaxStack = methodDef.Body.MaxStack};
 
+			//存放函数体内的信息，包括变量，指令等等
 			var bodyMap = new Dictionary<object, object>();
 
+			//处理函数内变量
 			foreach (Local local in methodDef.Body.Variables)
 			{
 				var newLocal = new Local(ctx.Importer.Import(local.Type));
@@ -132,6 +143,7 @@ namespace Confuser.Core.Helpers {
 				bodyMap[local] = newLocal;
 			}
 
+			//处理函数体中的指令，SequencePoint
 			foreach (Instruction instr in methodDef.Body.Instructions)
 			{
 				var newInstr = new Instruction(instr.OpCode, instr.Operand)
@@ -151,11 +163,11 @@ namespace Confuser.Core.Helpers {
 						newInstr.Operand = ctx.Importer.Import(field);
 						break;
 				}
-
+				
 				newMethodDef.Body.Instructions.Add(newInstr);
 				bodyMap[instr] = newInstr;
 			}
-
+			//对newMethodDef中的Instr进行赋值操作，为什么还需要做一次操作？
 			foreach (Instruction instr in newMethodDef.Body.Instructions)
 			{
 				if (instr.Operand != null && bodyMap.ContainsKey(instr.Operand))
@@ -163,7 +175,8 @@ namespace Confuser.Core.Helpers {
 				else if (instr.Operand is Instruction[] instructions)
 					instr.Operand = instructions.Select(target => (Instruction) bodyMap[target]).ToArray();
 			}
-
+			
+			//处理异常，Filter是啥？
 			foreach (ExceptionHandler eh in methodDef.Body.ExceptionHandlers)
 				newMethodDef.Body.ExceptionHandlers.Add(new ExceptionHandler(eh.HandlerType)
 				{
@@ -174,7 +187,7 @@ namespace Confuser.Core.Helpers {
 					HandlerEnd = (Instruction) bodyMap[eh.HandlerEnd],
 					FilterStart = eh.FilterStart == null ? null : (Instruction) bodyMap[eh.FilterStart]
 				});
-
+			//处理宏，c#中的宏是啥？
 			newMethodDef.Body.SimplifyMacros(newMethodDef.Parameters);
 		}
 
@@ -195,6 +208,9 @@ namespace Confuser.Core.Helpers {
 		/// <param name="typeDef">The origin TypeDef.</param>
 		/// <param name="ctx">The injection context.</param>
 		/// <param name="copySelf">if set to <c>true</c>, copy information of <paramref name="typeDef" />.</param>
+		/// 
+
+		//Copy操作包括TypeDef/MethodDef/FieldDef的复制
 		static void Copy(TypeDef typeDef, InjectContext ctx, bool copySelf) {
 			if (copySelf)
 				CopyTypeDef(typeDef, ctx);
